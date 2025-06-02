@@ -136,3 +136,30 @@ if (pdfUploadInput) {
     }
 
 
+    UIManager.showLoading("Extracting text from PDF...");
+    try {
+      const text = await PDFParser.extractTextFromPdf(file);
+      if (resumeTextArea) resumeTextArea.value = text;
+      UIManager.hideLoading();
+      UIManager.displayResults('PDF text extracted. Click "Analyze & Match Jobs" to proceed.');
+      // Ensure analyze button is visible and results area doesn't hide it
+      const analyzeBtn = document.getElementById('analyze-btn'); // M3 element
+      if(analyzeBtn) analyzeBtn.style.display = 'block';
+      const resultsDisplay = document.getElementById('results');
+      if(resultsDisplay) resultsDisplay.style.display = 'block'; // Show extraction message
+      const nextPageBtn = document.getElementById('next-page-btn'); // M3 element
+      if(nextPageBtn) nextPageBtn.style.display = 'none';
+
+
+    } catch (error) {
+      UIManager.showMessage(`Error: ${error}`, true);
+      console.error(error);
+      if (resumeTextArea) resumeTextArea.value = '';
+      e.target.value = '';
+      UIManager.hideLoading();
+      const resultsDisplay = document.getElementById('results');
+      if(resultsDisplay) resultsDisplay.style.display = 'none';
+    }
+  });
+}
+
