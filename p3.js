@@ -163,3 +163,35 @@ if (pdfUploadInput) {
   });
 }
 
+function handleSimulatedConversion(event, inputElement) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    UIManager.showLoading(`Converting ${file.name} to PDF... (Simulated)`);
+    setTimeout(() => {
+      UIManager.hideLoading();
+      // Create a dummy blob for the download link
+      const blob = new Blob(["Simulated PDF content for " + file.name], { type: "application/pdf" });
+      const dummyDownloadLink = URL.createObjectURL(blob);
+      UIManager.displayResults(`Simulated: "${file.name}" converted to PDF successfully.`, dummyDownloadLink);
+      inputElement.value = ''; // Clear the specific file input
+
+      // Clear other file inputs to avoid confusion and ensure resumeTextArea is clear if a general conversion is done
+      if (pdfUploadInput && inputElement !== pdfUploadInput) pdfUploadInput.value = '';
+      if (resumeTextArea) resumeTextArea.value = ''; // Clear resume text area as well
+      if (docToPdfUploadInput && inputElement !== docToPdfUploadInput) docToPdfUploadInput.value = '';
+      if (imgToPdfUploadInput && inputElement !== imgToPdfUploadInput) imgToPdfUploadInput.value = '';
+      if (htmlToPdfUploadInput && inputElement !== htmlToPdfUploadInput) htmlToPdfUploadInput.value = '';
+
+    }, 2000);
+}
+
+if (docToPdfUploadInput) {
+  docToPdfUploadInput.addEventListener('change', (e) => handleSimulatedConversion(e, docToPdfUploadInput));
+}
+if (imgToPdfUploadInput) {
+  imgToPdfUploadInput.addEventListener('change', (e) => handleSimulatedConversion(e, imgToPdfUploadInput));
+}
+if (htmlToPdfUploadInput) {
+  htmlToPdfUploadInput.addEventListener('change', (e) => handleSimulatedConversion(e, htmlToPdfUploadInput));
+}
