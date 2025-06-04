@@ -1,18 +1,40 @@
-<section id="converter-section">
-  <h2>File Converters</h2>
-  <label for="pdf-upload-input">Upload Resume (PDF only):</label>
-  <input type="file" id="pdf-upload-input" accept="application/pdf" aria-label="Upload PDF resume" />
+<section id="converter-section" style="padding: 20px; background-color: #f9f9f9; border-radius: 10px;">
+  <h2 style="color: #333;">📄 File Converters</h2>
 
-  <hr class="section-divider">
+  <label for="pdf-upload-input">Upload Resume (PDF only):</label><br>
+  <input type="file" id="pdf-upload-input" accept="application/pdf" aria-label="Upload PDF resume" /><br><br>
 
-  <label for="doc-to-pdf-upload-input">Convert Document to PDF (Doc, Docx, Txt, ODT, RTF):</label>
-  <input type="file" id="doc-to-pdf-upload-input" accept=".doc,.docx,.txt,.odt,.rtf" aria-label="Upload document to convert to PDF" />
+  <hr class="section-divider" style="margin: 20px 0;">
 
-  <label for="img-to-pdf-upload-input">Convert Image to PDF (JPG, JPEG, PNG, GIF, BMP):</label>
-  <input type="file" id="img-to-pdf-upload-input" accept="image/jpeg,image/png,image/gif,image/bmp" aria-label="Upload image to convert to PDF" />
+  <label for="doc-to-pdf-upload-input">Convert Document to PDF (Doc, Docx, Txt, ODT, RTF):</label><br>
+  <input type="file" id="doc-to-pdf-upload-input" accept=".doc,.docx,.txt,.odt,.rtf" aria-label="Upload document to convert to PDF" /><br><br>
 
-  <label for="html-to-pdf-upload-input">Convert Webpage to PDF (HTML):</label>
+  <label for="img-to-pdf-upload-input">Convert Image to PDF (JPG, JPEG, PNG, GIF, BMP):</label><br>
+  <input type="file" id="img-to-pdf-upload-input" accept="image/jpeg,image/png,image/gif,image/bmp" aria-label="Upload image to convert to PDF" /><br><br>
+
+  <label for="html-to-pdf-upload-input">Convert Webpage to PDF (HTML):</label><br>
   <input type="file" id="html-to-pdf-upload-input" accept=".html,.htm" aria-label="Upload HTML file to convert to PDF" />
 </section>
 
+<!-- PDF.js Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
+
+<!-- JavaScript for Upload Logging -->
+<script>
+  document.getElementById("pdf-upload-input").addEventListener("change", function() {
+    console.log("PDF Resume uploaded:", this.files[0]);
+  });
+
+  document.getElementById("doc-to-pdf-upload-input").addEventListener("change", function() {
+    console.log("Document uploaded for PDF conversion:", this.files[0]);
+  });
+
+  document.getElementById("img-to-pdf-upload-input").addEventListener("change", function() {
+    console.log("Image uploaded for PDF conversion:", this.files[0]);
+  });
+
+  document.getElementById("html-to-pdf-upload-input").addEventListener("change", function() {
+    console.log("HTML uploaded for PDF conversion:", this.files[0]);
+  });
+</script>
+
