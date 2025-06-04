@@ -1,197 +1,143 @@
 // --- PDF Handling (Conceptual Module 3: PDFParser) ---
 const PDFParser = (function() {
-  function loadPdfWorker() {
-    if (typeof pdfjsLib === 'undefined') {
-      console.error('PDF.js library not loaded.');
-      // UIManager.showMessage might not be fully available if UIManager is split.
-      // Alert is a fallback or ensure UIManager.showMessage is globally accessible.
-      alert('PDF library not loaded. Please check your internet connection.');
-      return false;
+
+  // Helper function to display messages to the user, using UIManager if available, otherwise fallback to alert.
+  function showUserMessage(message, isError = false) {
+    if (typeof UIManager !== 'undefined' && UIManager.showMessage) {
+      UIManager.showMessage(message, isError);
+    } else {
+      // Fallback if UIManager is not available or showMessage is not a function.
+      alert(message);
     }
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
-    return true;
   }
 
-  async function extractTextFromPdf(file) {
-    if (!loadPdfWorker()) {
-      // Fallback or ensure UIManager is accessible
-      if (typeof UIManager !== 'undefined' && UIManager.showMessage) {
-        UIManager.showMessage('PDF library not loaded. Please check your internet connection.', true);
-      } else {
-        alert('PDF library not loaded.');
-      }
-      return '';
+  // Loads and configures the PDF.js worker.
+  function loadPdfWorker() {
+    if (typeof pdfjsLib === 'undefined') {
+      console.error('PDF.js library (pdfjsLib) is not loaded.');
+      // User message will be handled by the calling function (extractTextFromPdf)
+      return false;
     }
 
+    // Ensure GlobalWorkerOptions is available before trying to set workerSrc.
+    if (pdfjsLib.GlobalWorkerOptions) {
+      // Consider making this URL configurable if you host PDF.js yourself or need version flexibility.
+      const PDF_WORKER_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.worker.min.js';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
+      return true;
+    } else {
+      console.error('PDF.js GlobalWorkerOptions not available. Cannot set worker source.');
+      return false;
+    }
+  }
+
+  // Asynchronously extracts text from a given PDF file.
+  async function extractTextFromPdf(file) {
+    // Validate the input file
+    if (!file) {
+      const noFileMsg = "No file provided for PDF extraction.";
+      console.error(noFileMsg);
+      showUserMessage(noFileMsg, true);
+      return Promise.reject(noFileMsg); // Return a rejected promise
+    }
+    if (!(file instanceof File)) {
+      const invalidFileMsg = "Invalid input: Expected a File object for PDF extraction.";
+      console.error(invalidFileMsg, file);
+      showUserMessage(invalidFileMsg, true);
+      return Promise.reject(invalidFileMsg);
+    }
+
+    // Attempt to load/configure the PDF.js worker.
+    if (!loadPdfWorker()) {
+      const libErrorMsg = 'PDF library worker could not be configured. Please ensure PDF.js is loaded and check your internet connection if using a CDN worker.';
+      console.error(libErrorMsg); // Log for developers
+      showUserMessage(libErrorMsg, true); // Show message to user
+      return Promise.reject(libErrorMsg); // Return a rejected promise
+    }
 
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = function() {
+
+      reader.onload = async function() { // Using async function for await keyword
         const typedarray = new Uint8Array(this.result);
-        pdfjsLib.getDocument(typedarray).promise.then(pdf => {
-          let textPromises = [];
-          for (let i = 1; i <= pdf.numPages; i++) {
-            textPromises.push(pdf.getPage(i).then(page => page.getTextContent().then(tc => tc.items.map(item => item.str).join(' '))));
+        let pdfDocument = null; // To hold the PDF document object for cleanup
+
+        try {
+          // Load the PDF document using the typed array.
+          // The {data: typedarray} object is a more robust way to pass the PDF data.
+          pdfDocument = await pdfjsLib.getDocument({ data: typedarray }).promise;
+          
+          const numPages = pdfDocument.numPages;
+          if (numPages === 0) {
+            resolve(''); // No pages mean no text, resolve with empty string.
+            if (pdfDocument) await pdfDocument.destroy(); // Still destroy if document was loaded
+            return;
           }
-          Promise.all(textPromises).then(texts => {
-            resolve(texts.join('\n\n'));
-          }).catch(err => {
-            console.error("Error getting text content:", err);
-            reject("Could not read text from PDF. It might be image-based or corrupted.");
-          });
-        }).catch(error => {
-          console.error("Error parsing PDF:", error);
-          reject("Error opening PDF file.");
-        });
+
+          // Create an array of promises, one for each page's text content.
+          const pageTextPromises = [];
+          for (let i = 1; i <= numPages; i++) {
+            pageTextPromises.push(
+              pdfDocument.getPage(i).then(page => {
+                return page.getTextContent().then(textContent => {
+                  return textContent.items.map(item => item.str).join(' ');
+                });
+              })
+            );
+          }
+          
+          // Wait for all page text promises to resolve.
+          const texts = await Promise.all(pageTextPromises);
+          resolve(texts.join('\n\n')); // Join text from all pages with double newline.
+
+        } catch (error) {
+          console.error("Error processing PDF:", error);
+          let userMessage = "Could not read text from PDF. The file might be corrupted, or an unknown error occurred.";
+          
+          // Provide more specific error messages based on the type of error.
+          if (error.name === 'PasswordException' || (error.message && error.message.toLowerCase().includes('password'))) {
+            userMessage = "The PDF file is encrypted and requires a password. Password-protected PDFs cannot be processed.";
+          } else if (error.name === 'InvalidPDFException' || (error.message && error.message.toLowerCase().includes('invalid pdf'))) {
+            userMessage = "The file is not a valid PDF or it is corrupted.";
+          } else if (error.name === 'MissingPDFException' || (error.message && error.message.toLowerCase().includes('missing pdf'))) {
+             userMessage = "The PDF file could not be found or is unreadable.";
+          } else if (pdfDocument && pdfDocument.numPages > 0 && !error.name) {
+             // If some pages were processed but an error occurred later, or if it's a generic error during text extraction
+             userMessage = "Could not fully extract text from the PDF. It might contain non-standard fonts, be partially corrupted, or be image-based.";
+          }
+          
+          showUserMessage(userMessage, true);
+          reject(userMessage); // Reject the promise with the user-friendly message
+
+        } finally {
+          // Ensure PDF document resources are cleaned up to free memory.
+          if (pdfDocument && typeof pdfDocument.destroy === 'function') {
+            try {
+              await pdfDocument.destroy();
+            } catch (destroyError) {
+              console.error("Error destroying PDF document:", destroyError);
+              // This error typically wouldn't be shown to the user unless it's critical.
+            }
+          }
+        }
       };
+
       reader.onerror = (error) => {
         console.error("FileReader error:", error);
-        reject("Error reading file.");
+        const fileReadErrorMsg = "Error reading the file. Please ensure the file is selected correctly and not damaged.";
+        showUserMessage(fileReadErrorMsg, true);
+        reject(fileReadErrorMsg);
       };
+
+      // Start reading the file as an ArrayBuffer.
       reader.readAsArrayBuffer(file);
     });
   }
 
+  // Expose public methods for the module.
   return {
-    extractTextFromPdf
+    extractTextFromPdf: extractTextFromPdf,
+    // You could also expose loadPdfWorker if it needs to be called during an application initialization phase:
+    // initializePdfWorker: loadPdfWorker 
   };
 })();
-
-// --- Extending UIManager for File Handling specific UI ---
-(function(UIManager) {
-  // Assume UIManager core (showMessage, showLoginScreen, showAppScreen) is defined by M1
-  // Add/extend functions for loading and results display specific to file operations
-  const loadingDiv = document.getElementById('loading'); // M3 defines this, M2 uses
-  const resultsPre = document.getElementById('results'); // M3 defines this, M2 uses
-  const nextPageBtn = document.getElementById('next-page-btn'); // M3 defines this
-
-  UIManager.showLoading = UIManager.showLoading || function(text = "Processing...") {
-    if (loadingDiv) {
-        const spinner = loadingDiv.querySelector('.spinner') || document.createElement('div');
-        if (!spinner.classList.contains('spinner')) spinner.className = 'spinner'; // ensure spinner class
-        loadingDiv.innerHTML = ''; // Clear previous content
-        loadingDiv.appendChild(spinner);
-        loadingDiv.appendChild(document.createTextNode(` ${text}`)); // Add text node for proper spacing
-        loadingDiv.style.display = 'flex';
-    }
-    if (resultsPre) resultsPre.style.display = 'none';
-    if (nextPageBtn) nextPageBtn.style.display = 'none';
-  };
-
-  UIManager.hideLoading = UIManager.hideLoading || function() {
-    if (loadingDiv) loadingDiv.style.display = 'none';
-  };
-
-  UIManager.displayResults = UIManager.displayResults || function(text, downloadLink = null) {
-    if (resultsPre) {
-      resultsPre.innerHTML = ''; // Clear previous content
-      resultsPre.textContent = text; // Set text content first
-      if (downloadLink) {
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.href = downloadLink;
-        downloadAnchor.textContent = 'Download Converted PDF';
-        downloadAnchor.className = 'download-link'; // Ensure this class is styled (M3)
-        downloadAnchor.download = 'converted_document.pdf';
-        resultsPre.appendChild(document.createElement('br'));
-        resultsPre.appendChild(downloadAnchor);
-      }
-      resultsPre.style.display = 'block';
-    }
-  };
-
-  // Add clearing of converter file inputs to showAppScreen and showMainAppContent (if defined by M1/M3)
-   const originalShowAppScreen = UIManager.showAppScreen;
-    UIManager.showAppScreen = function() {
-        if (originalShowAppScreen) originalShowAppScreen.apply(this, arguments);
-        const pdfUploadInput = document.getElementById('pdf-upload-input');
-        if (pdfUploadInput) pdfUploadInput.value = '';
-        const docToPdfInput = document.getElementById('doc-to-pdf-upload-input');
-        if (docToPdfInput) docToPdfInput.value = '';
-        const imgToPdfInput = document.getElementById('img-to-pdf-upload-input');
-        if (imgToPdfInput) imgToPdfInput.value = '';
-        const htmlToPdfInput = document.getElementById('html-to-pdf-upload-input');
-        if (htmlToPdfInput) htmlToPdfInput.value = '';
-    };
-
-
-})(UIManager || (UIManager = {})); // Ensure UIManager exists
-
-// --- Main Application Logic (Event Listeners for File Inputs) ---
-const pdfUploadInput = document.getElementById('pdf-upload-input');
-const docToPdfUploadInput = document.getElementById('doc-to-pdf-upload-input');
-const imgToPdfUploadInput = document.getElementById('img-to-pdf-upload-input');
-const htmlToPdfUploadInput = document.getElementById('html-to-pdf-upload-input');
-const resumeTextArea = document.getElementById('resume-text'); // Defined by M3, used by M2
-
-if (pdfUploadInput) {
-  pdfUploadInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.type !== 'application/pdf') {
-      UIManager.showMessage('Please upload a valid PDF file.', true); // UIManager from M1
-      e.target.value = '';
-      if (resumeTextArea) resumeTextArea.value = '';
-      return;
-    }
-
-
-    UIManager.showLoading("Extracting text from PDF...");
-    try {
-      const text = await PDFParser.extractTextFromPdf(file);
-      if (resumeTextArea) resumeTextArea.value = text;
-      UIManager.hideLoading();
-      UIManager.displayResults('PDF text extracted. Click "Analyze & Match Jobs" to proceed.');
-      // Ensure analyze button is visible and results area doesn't hide it
-      const analyzeBtn = document.getElementById('analyze-btn'); // M3 element
-      if(analyzeBtn) analyzeBtn.style.display = 'block';
-      const resultsDisplay = document.getElementById('results');
-      if(resultsDisplay) resultsDisplay.style.display = 'block'; // Show extraction message
-      const nextPageBtn = document.getElementById('next-page-btn'); // M3 element
-      if(nextPageBtn) nextPageBtn.style.display = 'none';
-
-
-    } catch (error) {
-      UIManager.showMessage(`Error: ${error}`, true);
-      console.error(error);
-      if (resumeTextArea) resumeTextArea.value = '';
-      e.target.value = '';
-      UIManager.hideLoading();
-      const resultsDisplay = document.getElementById('results');
-      if(resultsDisplay) resultsDisplay.style.display = 'none';
-    }
-  });
-}
-
-function handleSimulatedConversion(event, inputElement) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    UIManager.showLoading(`Converting ${file.name} to PDF... (Simulated)`);
-    setTimeout(() => {
-      UIManager.hideLoading();
-      // Create a dummy blob for the download link
-      const blob = new Blob(["Simulated PDF content for " + file.name], { type: "application/pdf" });
-      const dummyDownloadLink = URL.createObjectURL(blob);
-      UIManager.displayResults(`Simulated: "${file.name}" converted to PDF successfully.`, dummyDownloadLink);
-      inputElement.value = ''; // Clear the specific file input
-
-      // Clear other file inputs to avoid confusion and ensure resumeTextArea is clear if a general conversion is done
-      if (pdfUploadInput && inputElement !== pdfUploadInput) pdfUploadInput.value = '';
-      if (resumeTextArea) resumeTextArea.value = ''; // Clear resume text area as well
-      if (docToPdfUploadInput && inputElement !== docToPdfUploadInput) docToPdfUploadInput.value = '';
-      if (imgToPdfUploadInput && inputElement !== imgToPdfUploadInput) imgToPdfUploadInput.value = '';
-      if (htmlToPdfUploadInput && inputElement !== htmlToPdfUploadInput) htmlToPdfUploadInput.value = '';
-
-    }, 2000);
-}
-
-if (docToPdfUploadInput) {
-  docToPdfUploadInput.addEventListener('change', (e) => handleSimulatedConversion(e, docToPdfUploadInput));
-}
-if (imgToPdfUploadInput) {
-  imgToPdfUploadInput.addEventListener('change', (e) => handleSimulatedConversion(e, imgToPdfUploadInput));
-}
-if (htmlToPdfUploadInput) {
-  htmlToPdfUploadInput.addEventListener('change', (e) => handleSimulatedConversion(e, htmlToPdfUploadInput));
-}
