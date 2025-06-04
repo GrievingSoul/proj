@@ -1,179 +1,60 @@
-/* Converter Section (Left Block) */
-#converter-section {
-  background: rgba(255 255 255 / 0.08);
-  backdrop-filter: blur(12px);
-  border-radius: 16px;
-  box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-  color: #f0f0f5;
-  padding: 25px 20px;
-  width: 300px; /* Fixed width for the converter section */
-  min-width: 280px; /* Ensure it doesn't get too small */
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  flex-shrink: 0; /* Prevent it from shrinking */
+<label for="doc-to-pdf-upload-input">Convert Document to PDF (Doc, Docx, Txt, ODT, RTF):</label><br>
+<input type="file" id="doc-to-pdf-upload-input" accept=".doc,.docx,.txt,.odt,.rtf" aria-label="Upload document to convert to PDF" /><br><br>
+
+<label for="img-to-pdf-upload-input">Convert Image to PDF (JPG, JPEG, PNG, GIF, BMP):</label><br>
+<input type="file" id="img-to-pdf-upload-input" accept="image/jpeg,image/png,image/gif,image/bmp" aria-label="Upload image to convert to PDF" /><br><br>
+
+<label for="html-to-pdf-upload-input">Convert Webpage to PDF (HTML):</label><br>
+<input type="file" id="html-to-pdf-upload-input" accept=".html,.htm" aria-label="Upload HTML file to convert to PDF" /><br><br>
+
+<!-- Added loading spinner -->
+<div id="upload-spinner" style="display: none; text-align: center; margin-top: 15px;">
+  <span class="loading-text">Processing file...</span>
+</div>
+
+</section>
+
+<!-- PDF.js Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.9.179/pdf.min.js"></script>
+
+<!-- JavaScript for Upload Logging -->
+<script>
+const spinner = document.getElementById("upload-spinner");
+
+function showSpinner() {
+  spinner.style.display = "block";
 }
 
-#converter-section h2 {
-  color: #fff;
-  text-align: center;
-  margin-bottom: 25px;
-  font-size: 1.6rem;
-  text-shadow: 0 1px 5px rgba(255 255 255 / 0.5);
+function hideSpinner() {
+  setTimeout(() => spinner.style.display = "none", 1200); // Auto-hide after short delay
 }
 
-#converter-section label {
-  display: block;
-  margin-top: 15px; /* Spacing between conversion options */
-  margin-bottom: 8px;
-  font-weight: 600;
-  user-select: none;
-  color: #d8d8e8;
-  font-size: 0.95em;
-}
+document.getElementById("pdf-upload-input").addEventListener("change", function() {
+  console.log("PDF Resume uploaded:", this.files[0]);
 
-#converter-section input[type="file"] {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1.5px solid #a7c7e7;
-  background: rgba(255 255 255 / 0.15);
-  color: #fff;
-  cursor: pointer;
-  user-select: none;
-  font-size: 0.9em;
-  transition: all 0.2s ease;
-}
+  showSpinner();
+  hideSpinner();
+});
 
-/* ADDED: Hover and Focus states for file input */
-#converter-section input[type="file"]:hover {
-  border-color: #8cb3d9; /* Slightly lighter blue on hover */
-  background: rgba(255 255 255 / 0.2);
-}
+document.getElementById("doc-to-pdf-upload-input").addEventListener("change", function() {
+  console.log("Document uploaded for PDF conversion:", this.files[0]);
 
-#converter-section input[type="file"]:focus {
-  outline: none;
-  border-color: #6a85b6; /* Highlight color on focus */
-  box-shadow: 0 0 0 3px rgba(106, 133, 182, 0.4); /* Soft focus ring */
-}
+  showSpinner();
+  hideSpinner();
+});
 
-#converter-section input[type="file"]::file-selector-button {
-  background-color: #6a85b6;
-  color: white;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s ease; /* ADDED: Transition for smooth hover */
-}
+document.getElementById("img-to-pdf-upload-input").addEventListener("change", function() {
+  console.log("Image uploaded for PDF conversion:", this.files[0]);
 
-/* ADDED: Hover state for file selector button */
-#converter-section input[type="file"]::file-selector-button:hover {
-  background-color: #5a75a6; /* Darker shade on hover */
-}
+  showSpinner();
+  hideSpinner();
+});
 
-/* ADDED: Styling for a generic select dropdown */
-#converter-section select {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1.5px solid #a7c7e7;
-  background: rgba(255 255 255 / 0.15);
-  color: #fff; /* Text color for options */
-  cursor: pointer;
-  user-select: none;
-  font-size: 0.9em;
-  transition: all 0.2s ease;
-  appearance: none; /* Remove default system appearance */
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23d8d8e8' width='18px' height='18px'%3E%3Cpath d='M7 10l5 5 5-5H7z'/%3E%3C/svg%3E"); /* Custom arrow */
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 35px; /* Make space for the custom arrow */
-}
+document.getElementById("html-to-pdf-upload-input").addEventListener("change", function() {
+  console.log("HTML uploaded for PDF conversion:", this.files[0]);
 
-#converter-section select:hover {
-  border-color: #8cb3d9;
-  background: rgba(255 255 255 / 0.2);
-}
-
-#converter-section select:focus {
-  outline: none;
-  border-color: #6a85b6;
-  box-shadow: 0 0 0 3px rgba(106, 133, 182, 0.4);
-}
-
-/* Limited styling for select options (browser dependent) */
-#converter-section select option {
-  background: #2c3e50; /* Dark background for dropdown options list */
-  color: #f0f0f5;
-}
-
-/* ADDED: Styling for a generic action button (e.g., "Convert" button) */
-#converter-section .action-button {
-  background-color: #6a85b6;
-  color: white;
-  padding: 12px 15px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1em;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 25px; /* Space above the button */
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  display: block; /* Make it block to take full available width or respect margins */
-  width: 100%; /* Make button take full width of its container */
-  box-sizing: border-box; /* Include padding and border in the element's total width and height */
-}
-
-#converter-section .action-button:hover {
-  background-color: #5a75a6; /* Darker shade on hover */
-}
-
-#converter-section .action-button:active {
-  background-color: #4a6596; /* Even darker shade on active/click */
-  transform: translateY(1px); /* Slight press effect */
-}
-
-#converter-section .action-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(106, 133, 182, 0.4); /* Focus ring consistent with inputs */
-}
-
-
-/* ADDED: Styling for a message area (e.g., for status, errors, success messages) */
-#converter-section .message-area {
-  margin-top: 20px;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 0.9em;
-  text-align: center;
-  line-height: 1.4;
-  display: none; /* Hidden by default, show with JS */
-}
-
-#converter-section .message-area.success {
-  background-color: rgba(40, 167, 69, 0.15);
-  border: 1.5px solid rgba(40, 167, 69, 0.4);
-  color: #b8e9c3; /* Lighter green text for readability */
-  display: block; /* Or set via JS */
-}
-
-#converter-section .message-area.error {
-  background-color: rgba(220, 53, 69, 0.15);
-  border: 1.5px solid rgba(220, 53, 69, 0.4);
-  color: #f5c6cb; /* Lighter red text for readability */
-  display: block; /* Or set via JS */
-}
-
-#converter-section .message-area.info {
-  background-color: rgba(23, 162, 184, 0.15);
-  border: 1.5px solid rgba(23, 162, 184, 0.4);
-  color: #b8def5; /* Lighter cyan text for readability */
-  display: block; /* Or set via JS */
-}
+  showSpinner();
+  hideSpinner();
+});
+</script>
 
