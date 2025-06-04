@@ -14,6 +14,11 @@
 
   <label for="html-to-pdf-upload-input">Convert Webpage to PDF (HTML):</label><br>
   <input type="file" id="html-to-pdf-upload-input" accept=".html,.htm" aria-label="Upload HTML file to convert to PDF" />
+
+  <!-- Added loading spinner -->
+  <div id="upload-spinner" style="display: none; text-align: center; margin-top: 15px;">
+    <span class="loading-text">Processing file...</span>
+  </div>
 </section>
 
 <!-- PDF.js Library -->
@@ -21,20 +26,38 @@
 
 <!-- JavaScript for Upload Logging -->
 <script>
+  const spinner = document.getElementById("upload-spinner");
+
+  function showSpinner() {
+    spinner.style.display = "block";
+  }
+
+  function hideSpinner() {
+    setTimeout(() => spinner.style.display = "none", 1200); // Auto-hide after short delay
+  }
+
   document.getElementById("pdf-upload-input").addEventListener("change", function() {
     console.log("PDF Resume uploaded:", this.files[0]);
+    showSpinner();
+    hideSpinner();
   });
 
   document.getElementById("doc-to-pdf-upload-input").addEventListener("change", function() {
     console.log("Document uploaded for PDF conversion:", this.files[0]);
+    showSpinner();
+    hideSpinner();
   });
 
   document.getElementById("img-to-pdf-upload-input").addEventListener("change", function() {
     console.log("Image uploaded for PDF conversion:", this.files[0]);
+    showSpinner();
+    hideSpinner();
   });
 
   document.getElementById("html-to-pdf-upload-input").addEventListener("change", function() {
     console.log("HTML uploaded for PDF conversion:", this.files[0]);
+    showSpinner();
+    hideSpinner();
   });
 </script>
 
